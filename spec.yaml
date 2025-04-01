@@ -1,0 +1,130 @@
+version: '3'
+
+x-omnistrate-integrations:
+  - omnistrateLogging:
+  - omnistrateMetrics:
+
+services:
+  raycluster:
+    image: omnistrate/noop
+    depends_on:
+      - rayhead
+      - rayworker
+    x-omnistrate-api-params:
+      - key: numGPUWorkerReplicas
+        description: Number of GPU worker replicas
+        name: Number of GPU-powered worker Replicas
+        type: Float64
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "0"
+      - key: gpuWorkerInstanceType
+        description: GPU worker instance type
+        name: GPU Worker Instance Type
+        type: String
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "g4dn.xlarge"
+      - key: cpuWorkerInstanceType
+        description: CPU worker instance type
+        name: CPU Worker Instance Type
+        type: String
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "t3.xlarge"
+  rayhead:
+    x-omnistrate-compute:
+      replicaCount: 1
+      instanceTypes:
+        - cloudProvider: aws
+          name: t4g.large
+        - cloudProvider: gcp
+          name: e2-standard-2
+    x-omnistrate-mode-internal: true
+    x-omnistrate-capabilities:
+      httpReverseProxy:
+        targetPort: 8265
+    build:
+      context: ./rayhead
+      dockerfile: Dockerfile
+    command: /bin/sh -c '/start.sh'
+    ports:
+      - "8265:8265" # Ray Dashboard
+      - "6379:6379" # Ray Redis
+      - "10001:10001" # Ray Client
+  rayworker:
+    x-omnistrate-compute:
+      replicaCountAPIParam: numReplicas
+      instanceTypes:
+        - cloudProvider: aws
+          apiParam: instanceType
+        - cloudProvider: gcp
+          apiParam: instanceType
+    x-omnistrate-mode-internal: true
+    build:
+      context: ./rayworker
+      dockerfile: Dockerfile
+    command: /bin/sh -c '/start.sh'
+    x-omnistrate-capabilities:
+      autoscaling:
+        maxReplicas: 5
+        minReplicas: 1
+        idleMinutesBeforeScalingDown: 2
+        idleThreshold: 20
+        overUtilizedMinutesBeforeScalingUp: 3
+        overUtilizedThreshold: 80
+      enableMultiZone: true
+    x-omnistrate-api-params:
+      - key: instanceType
+        description: Instance Type
+        name: Instance Type
+        type: String
+        modifiable: true
+        required: true
+        export: true
+      - key: numReplicas
+        description: Number of Replicas
+        name: Number of Replicas
+        type: Float64
+        modifiable: true
+        required: true
+        export: true
+  # raygpuworker:
+  #   x-omnistrate-compute:
+  #     replicaCountAPIParam: numReplicas
+  #     instanceTypes:
+  #       - cloudProvider: aws
+  #         apiParam: instanceType
+  #       - cloudProvider: gcp
+  #         apiParam: instanceType
+  #   x-omnistrate-mode-internal: true
+  #   x-omnistrate-capabilities:
+  #     enableMultiZone: true
+  #   build:
+  #     context: ./raygpuworker
+  #     dockerfile: Dockerfile
+  #   command: /bin/sh -c '/start.sh'
+  #   x-omnistrate-api-params:
+  #     - key: instanceType
+  #       description: Instance Type
+  #       name: Instance Type
+  #       type: String
+  #       modifiable: true
+  #       required: true
+  #       export: true
+  #     - key: numReplicas
+  #       description: Number of Replicas
+  #       name: Number of Replicas
+  #       type: Float64
+  #       modifiable: true
+  #       required: true
+  #       export: true
+  echo-service:
+    image: alpine:latest
+    command: sh -c 'echo "Hello, this is a test message!" && exit 0'
+    x-omnistrate-job-config:
+      backoffLimit: 3
+      activeDeadlineSeconds: 3600
