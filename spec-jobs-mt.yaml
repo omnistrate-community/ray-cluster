@@ -1,0 +1,61 @@
+version: '3'
+
+x-omnistrate-integrations:
+  - omnistrateLogging:
+  - omnistrateMetrics:
+
+x-omnistrate-service-plan:
+  name: 'ray-jobs'
+  tenancyType: 'OMNISTRATE_MULTI_TENANCY'
+
+services:
+  hello-world:
+    build:
+      context: ./jobs/hello-world
+      dockerfile: Dockerfile
+    environment:
+      RAY_ADDRESS: "ray://{{ $var.rayClusterAddress }}:10001"
+      SCRIPT_PATH: "submit_job.py"
+    deploy:
+      resources:
+        reservations:
+          cpus: "0.1"
+          memory: 256M
+        limits:
+          cpus: "0.5"
+          memory: 1G
+    privileged: true
+    platform: linux/amd64
+    volumes:
+      - source: ./jobs/hello-world
+        target: /app
+        type: bind
+      - source: ./tmp
+        target: /tmp
+        type: bind
+    x-omnistrate-compute:
+      replicaCountApiParam: numReplicas
+    x-omnistrate-job-config:
+      backoffLimit: 0
+      activeDeadlineSeconds: 3600
+    x-omnistrate-api-params:
+      - key: rayClusterAddress
+        description: Ray Cluster Address
+        name: Ray Cluster Address
+        type: String
+        modifiable: true
+        required: true
+        export: true
+      - key: numReplicas
+        description: Number of Replicas
+        name: Number of Replicas
+        type: Float64
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "1"
+x-omnistrate-image-registry-attributes:
+  ghcr.io:
+    auth:
+      password: ${{ secrets.GitHubPAT }}
+      username: aloknikhil
