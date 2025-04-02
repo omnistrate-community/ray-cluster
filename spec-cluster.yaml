@@ -23,6 +23,7 @@ services:
     depends_on:
       - rayhead
       - rayworker
+      - raygpuworker
     x-omnistrate-api-params:
       - key: numGPUWorkerReplicas
         description: Number of GPU worker replicas
@@ -32,8 +33,8 @@ services:
         required: false
         export: true
         defaultValue: "0"
-        # parameterDependencyMap:
-        #   raygpuworker: numReplicas
+        parameterDependencyMap:
+          raygpuworker: numReplicas
       - key: gpuWorkerInstanceType
         description: GPU worker instance type
         name: GPU Worker Instance Type
@@ -42,8 +43,8 @@ services:
         required: false
         export: true
         defaultValue: "g4dn.xlarge"
-        # parameterDependencyMap:
-        #   raygpuworker: instanceType
+        parameterDependencyMap:
+          raygpuworker: instanceType
       - key: cpuWorkerInstanceType
         description: CPU worker instance type
         name: CPU Worker Instance Type
@@ -114,36 +115,38 @@ services:
         modifiable: true
         required: true
         export: true
-  # raygpuworker:
-  #   x-omnistrate-compute:
-  #     replicaCountAPIParam: numReplicas
-  #     instanceTypes:
-  #       - cloudProvider: aws
-  #         apiParam: instanceType
-  #       - cloudProvider: gcp
-  #         apiParam: instanceType
-  #   x-omnistrate-mode-internal: true
-  #   x-omnistrate-capabilities:
-  #     enableMultiZone: true
-  #   build:
-  #     context: ./raygpuworker
-  #     dockerfile: Dockerfile
-  #   command: /bin/sh -c '/start.sh'
-  #   x-omnistrate-api-params:
-  #     - key: instanceType
-  #       description: Instance Type
-  #       name: Instance Type
-  #       type: String
-  #       modifiable: true
-  #       required: true
-  #       export: true
-  #     - key: numReplicas
-  #       description: Number of Replicas
-  #       name: Number of Replicas
-  #       type: Float64
-  #       modifiable: true
-  #       required: true
-  #       export: true
+  raygpuworker:
+    x-omnistrate-compute:
+      replicaCountAPIParam: numReplicas
+      instanceTypes:
+        - cloudProvider: aws
+          apiParam: instanceType
+        - cloudProvider: gcp
+          apiParam: instanceType
+    x-omnistrate-mode-internal: true
+    x-omnistrate-capabilities:
+      enableMultiZone: true
+    build:
+      context: ./raygpuworker
+      dockerfile: Dockerfile
+    command: /bin/sh -c '/start.sh'
+    environment:
+      NUM_GPUS: "{{ $sys.compute.node.gpus }}"
+    x-omnistrate-api-params:
+      - key: instanceType
+        description: Instance Type
+        name: Instance Type
+        type: String
+        modifiable: true
+        required: true
+        export: true
+      - key: numReplicas
+        description: Number of Replicas
+        name: Number of Replicas
+        type: Float64
+        modifiable: true
+        required: true
+        export: true
 x-omnistrate-image-registry-attributes:
   ghcr.io:
     auth:
