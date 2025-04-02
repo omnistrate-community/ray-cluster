@@ -14,8 +14,8 @@ x-omnistrate-load-balancer:
           backendPort: 8265
 
 x-omnistrate-service-plan:
-  name: 'ray-cluster'
-  tenancyType: 'OMNISTRATE_DEDICATED_TENANCY'
+  name: 'ray-cluster-mt'
+  tenancyType: 'OMNISTRATE_MULTI_TENANCY'
 
 services:
   raycluster:
@@ -23,80 +23,42 @@ services:
     depends_on:
       - rayhead
       - rayworker
-    x-omnistrate-api-params:
-      - key: numGPUWorkerReplicas
-        description: Number of GPU worker replicas
-        name: Number of GPU-powered worker Replicas
-        type: Float64
-        modifiable: true
-        required: false
-        export: true
-        defaultValue: "0"
-        # parameterDependencyMap:
-        #   raygpuworker: numReplicas
-      - key: gpuWorkerInstanceType
-        description: GPU worker instance type
-        name: GPU Worker Instance Type
-        type: String
-        modifiable: true
-        required: false
-        export: true
-        defaultValue: "g4dn.xlarge"
-        # parameterDependencyMap:
-        #   raygpuworker: instanceType
-      - key: cpuWorkerInstanceType
-        description: CPU worker instance type
-        name: CPU Worker Instance Type
-        type: String
-        modifiable: true
-        required: false
-        export: true
-        defaultValue: "t3.small"
-        parameterDependencyMap:
-          rayworker: instanceType
   rayhead:
     x-omnistrate-compute:
       replicaCount: 1
-      instanceTypes:
-        - cloudProvider: aws
-          apiParam: instanceType
-        - cloudProvider: gcp
-          apiParam: instanceType
     x-omnistrate-mode-internal: true
     build:
       context: ./rayhead
       dockerfile: Dockerfile
     command: /bin/sh -c '/start.sh'
+    platform: linux/amd64
+    deploy:
+      resources:
+        reservations:
+          cpus: "0.5"
+          memory: 1G
+        limits:
+          cpus: "1"
+          memory: 4G
     ports:
       - "8265:8265" # Ray Dashboard
       - "6379:6379" # Ray Redis
       - "10001:10001" # Ray Client
-    # environment:
-    #   RAY_USE_TLS: "0"
-    #   RAY_TLS_SERVER_CERT: "/etc/tls/tls.crt"
-    #   RAY_TLS_SERVER_KEY: "/etc/tls/tls.key"
-    #   RAY_TLS_CA_CERT: "/etc/tls/tls-combined.pem"
-    x-omnistrate-api-params:
-      - key: instanceType
-        description: Instance Type
-        name: Instance Type
-        type: String
-        modifiable: true
-        required: false
-        export: true
-        defaultValue: "t3.large"
   rayworker:
-    x-omnistrate-compute:
-      instanceTypes:
-        - cloudProvider: aws
-          apiParam: instanceType
-        - cloudProvider: gcp
-          apiParam: instanceType
     x-omnistrate-mode-internal: true
     build:
       context: ./rayworker
       dockerfile: Dockerfile
     command: /bin/sh -c '/start.sh'
+    platform: linux/amd64
+    deploy:
+      resources:
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+        limits:
+          cpus: "0.5"
+          memory: 1G
     x-omnistrate-capabilities:
       autoscaling:
         maxReplicas: 5
@@ -106,14 +68,6 @@ services:
         overUtilizedMinutesBeforeScalingUp: 3
         overUtilizedThreshold: 80
       enableMultiZone: true
-    x-omnistrate-api-params:
-      - key: instanceType
-        description: Instance Type
-        name: Instance Type
-        type: String
-        modifiable: true
-        required: true
-        export: true
   # raygpuworker:
   #   x-omnistrate-compute:
   #     replicaCountAPIParam: numReplicas
@@ -151,7 +105,16 @@ services:
     environment:
       RAY_ADDRESS: "ray://{{ $var.rayClusterAddress }}:10001"
       SCRIPT_PATH: "submit_job.py"
+    deploy:
+      resources:
+        reservations:
+          cpus: "0.1"
+          memory: 256M
+        limits:
+          cpus: "0.5"
+          memory: 1G
     privileged: true
+    platform: linux/amd64
     volumes:
       - source: ./jobs/hello-world
         target: /app
@@ -161,11 +124,6 @@ services:
         type: bind
     x-omnistrate-compute:
       replicaCountApiParam: numReplicas
-      instanceTypes:
-        - cloudProvider: aws
-          name: t3.small
-        - cloudProvider: gcp
-          name: e2-small
     x-omnistrate-job-config:
       backoffLimit: 0
       activeDeadlineSeconds: 3600
