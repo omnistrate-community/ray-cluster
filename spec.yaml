@@ -4,6 +4,15 @@ x-omnistrate-integrations:
   - omnistrateLogging:
   - omnistrateMetrics:
 
+x-omnistrate-load-balancer:
+  https:
+    - name: Dashboard
+      description: L7 Load Balancer for the Ray Head Node Dashboard
+      paths:
+        - associatedResourceKey: rayhead
+          path: /
+          backendPort: 8265
+
 services:
   raycluster:
     image: omnistrate/noop
@@ -19,6 +28,8 @@ services:
         required: false
         export: true
         defaultValue: "0"
+        # parameterDependencyMap:
+        #   raygpuworker: numReplicas
       - key: gpuWorkerInstanceType
         description: GPU worker instance type
         name: GPU Worker Instance Type
@@ -27,6 +38,8 @@ services:
         required: false
         export: true
         defaultValue: "g4dn.xlarge"
+        # parameterDependencyMap:
+        #   raygpuworker: instanceType
       - key: cpuWorkerInstanceType
         description: CPU worker instance type
         name: CPU Worker Instance Type
@@ -34,19 +47,18 @@ services:
         modifiable: true
         required: false
         export: true
-        defaultValue: "t3.xlarge"
+        defaultValue: "t3.small"
+        parameterDependencyMap:
+          rayworker: instanceType
   rayhead:
     x-omnistrate-compute:
       replicaCount: 1
       instanceTypes:
         - cloudProvider: aws
-          name: t4g.large
+          apiParam: instanceType
         - cloudProvider: gcp
-          name: e2-standard-2
+          apiParam: instanceType
     x-omnistrate-mode-internal: true
-    x-omnistrate-capabilities:
-      httpReverseProxy:
-        targetPort: 8265
     build:
       context: ./rayhead
       dockerfile: Dockerfile
@@ -55,9 +67,22 @@ services:
       - "8265:8265" # Ray Dashboard
       - "6379:6379" # Ray Redis
       - "10001:10001" # Ray Client
+    # environment:
+    #   RAY_USE_TLS: "0"
+    #   RAY_TLS_SERVER_CERT: "/etc/tls/tls.crt"
+    #   RAY_TLS_SERVER_KEY: "/etc/tls/tls.key"
+    #   RAY_TLS_CA_CERT: "/etc/tls/tls-combined.pem"
+    x-omnistrate-api-params:
+      - key: instanceType
+        description: Instance Type
+        name: Instance Type
+        type: String
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "t3.large"
   rayworker:
     x-omnistrate-compute:
-      replicaCountAPIParam: numReplicas
       instanceTypes:
         - cloudProvider: aws
           apiParam: instanceType
@@ -82,13 +107,6 @@ services:
         description: Instance Type
         name: Instance Type
         type: String
-        modifiable: true
-        required: true
-        export: true
-      - key: numReplicas
-        description: Number of Replicas
-        name: Number of Replicas
-        type: Float64
         modifiable: true
         required: true
         export: true
@@ -122,9 +140,46 @@ services:
   #       modifiable: true
   #       required: true
   #       export: true
-  echo-service:
-    image: alpine:latest
-    command: sh -c 'echo "Hello, this is a test message!" && exit 0'
+  hello-world:
+    build:
+      context: ./jobs/hello-world
+      dockerfile: Dockerfile
+    environment:
+      RAY_ADDRESS: "ray://{{ $var.rayClusterAddress }}:10001"
+      SCRIPT_PATH: "ray_task.py"
+    privileged: true
+    volumes:
+      - source: ./jobs/hello-world
+        target: /app
+        type: bind
+    x-omnistrate-compute:
+      replicaCountApiParam: numReplicas
+      instanceTypes:
+        - cloudProvider: aws
+          name: t3.small
+        - cloudProvider: gcp
+          name: e2-small
     x-omnistrate-job-config:
-      backoffLimit: 3
+      backoffLimit: 0
       activeDeadlineSeconds: 3600
+    x-omnistrate-api-params:
+      - key: rayClusterAddress
+        description: Ray Cluster Address
+        name: Ray Cluster Address
+        type: String
+        modifiable: true
+        required: true
+        export: true
+      - key: numReplicas
+        description: Number of Replicas
+        name: Number of Replicas
+        type: Float64
+        modifiable: true
+        required: false
+        export: true
+        defaultValue: "1"
+x-omnistrate-image-registry-attributes:
+  ghcr.io:
+    auth:
+      password: ${{ secrets.GitHubPAT }}
+      username: aloknikhil
