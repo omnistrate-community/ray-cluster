@@ -4,6 +4,345 @@ x-omnistrate-integrations:
   - omnistrateLogging:
   - omnistrateMetrics:
 
+x-internal-integrations:
+  metrics:
+    additionalMetrics:
+      # --- Ray Head Node ---
+      rayhead:
+        # Default Ray metrics endpoint is often :8080 on the head node, adjust if necessary
+        prometheusEndpoint: "http://localhost:8080" 
+        metrics: 
+          # --- Cluster State ---
+          ray_cluster_active_nodes: # Gauge: Number of active nodes (potentially per type), reported by GCS.
+            total_active_nodes:     # Summing across types/potential GCS replicas gives the overall count.
+              aggregationFunction: sum 
+          ray_node_failure_total:     # Counter: Node failures reported by GCS.
+            total_node_failures:    # Sum across potential GCS replicas.
+              aggregationFunction: sum
+          ray_running_jobs:           # Gauge: Running jobs reported by GCS.
+            total_running_jobs:     # Sum across potential GCS replicas.
+              aggregationFunction: sum
+          ray_finished_jobs_total:    # Counter: Finished jobs reported by GCS.
+            total_finished_jobs:    # Sum across potential GCS replicas.
+              aggregationFunction: sum
+
+          # --- Node Resources (Aggregated per Node) ---
+          ray_node_cpu_utilization:             # Gauge: Keep per-node to spot hotspots. No cluster aggregation.
+          ray_node_cpu_count:                   # Gauge: Total CPU cores available per node.
+            total_cluster_cpus:               # Summing gives total cluster CPU capacity.
+              aggregationFunction: sum
+          ray_node_mem_used:                    # Gauge: Physical memory used per node.
+            total_cluster_mem_used_bytes:     # Summing gives total cluster physical memory usage.
+              aggregationFunction: sum
+          ray_node_mem_available:               # Gauge: Keep per-node. Summing available memory isn't typically useful.
+          ray_node_mem_total:                   # Gauge: Total physical memory per node.
+            total_cluster_mem_bytes:          # Summing gives total cluster physical memory capacity.
+              aggregationFunction: sum
+          ray_node_mem_shared_bytes:            # Gauge: Shared memory usage per node.
+            total_cluster_mem_shared_bytes:   # Summing gives total shared memory usage across the cluster.
+              aggregationFunction: sum
+          ray_node_disk_utilization_percentage: # Gauge: Keep per-node to identify full disks. No cluster aggregation.
+          ray_node_disk_io_read_speed:          # Gauge: Disk read speed per node.
+            total_cluster_disk_read_bytes_per_second: # Summing gives total cluster disk read throughput.
+              aggregationFunction: sum
+          ray_node_disk_io_write_speed:         # Gauge: Disk write speed per node.
+            total_cluster_disk_write_bytes_per_second: # Summing gives total cluster disk write throughput.
+              aggregationFunction: sum
+          ray_node_disk_read_iops:              # Gauge: Disk read IOPS per node.
+            total_cluster_disk_read_iops:     # Summing gives total cluster disk read IOPS.
+              aggregationFunction: sum
+          ray_node_disk_write_iops:             # Gauge: Disk write IOPS per node.
+            total_cluster_disk_write_iops:    # Summing gives total cluster disk write IOPS.
+              aggregationFunction: sum
+          ray_node_network_send_speed:          # Gauge: Network send speed per node.
+            total_cluster_network_send_bytes_per_second: # Summing gives total cluster network send throughput.
+              aggregationFunction: sum
+          ray_node_network_receive_speed:       # Gauge: Network receive speed per node.
+            total_cluster_network_receive_bytes_per_second: # Summing gives total cluster network receive throughput.
+              aggregationFunction: sum
+
+          # --- Component Resources (Per Component: raylet, agent, etc.) ---
+          # These are typically analyzed per-node, per-component. Aggregation often hides problems.
+          ray_component_cpu_percentage:         
+          ray_component_rss_mb:                 
+          ray_component_uss_mb:                 
+          ray_component_num_fds:                # Gauge: File descriptors per node/component.
+            total_cluster_component_fds:      # Summing gives total FDs used by Ray components cluster-wide.
+              aggregationFunction: sum
+
+          # --- Scheduling & Workload ---
+          # These gauges have labels (State, Reason). Summing across nodes *while preserving labels* is useful.
+          # The aggregationFunction applies *before* grouping by labels in a typical PromQL query.
+          ray_scheduler_tasks:                  # Gauge: Tasks per node/state.
+            total_scheduler_tasks_by_state:   # Summing gives cluster-wide task counts (query with `sum by (State)`).
+              aggregationFunction: sum
+          ray_scheduler_unscheduleable_tasks:   # Gauge: Unschedulable tasks per node/reason.
+            total_unschedulable_tasks_by_reason: # Summing gives cluster-wide counts (query with `sum by (Reason)`).
+              aggregationFunction: sum
+          ray_gcs_actors_count:                 # Gauge: Actor counts per state from GCS.
+            total_actors_by_state:            # Summing across potential GCS replicas (query with `sum by (State)`).
+              aggregationFunction: sum
+          ray_gcs_placement_group_count:        # Gauge: PG counts per state from GCS.
+            total_pgs_by_state:               # Summing across potential GCS replicas (query with `sum by (State)`).
+              aggregationFunction: sum
+
+          # --- Object Store & Spilling ---
+          ray_object_store_used_memory:         # Gauge: Object store memory used per node.
+            total_cluster_object_store_used_bytes: # Summing gives total cluster object store usage.
+              aggregationFunction: sum
+          ray_object_store_available_memory:    # Gauge: Keep per-node. Summing available isn't typically useful.
+          ray_object_store_num_local_objects:   # Gauge: Number of primary object copies per node.
+            total_cluster_local_objects:      # Summing gives total primary objects across all nodes.
+              aggregationFunction: sum
+          ray_object_store_fallback_memory:     # Gauge: Memory spilled to disk per node.
+            total_cluster_fallback_bytes:     # Summing gives total bytes spilled to disk cluster-wide.
+              aggregationFunction: sum
+          ray_spill_manager_request_total:      # Gauge: Spill/restore counts per node/type.
+            total_spill_requests_by_type:     # Summing gives cluster-wide counts (query with `sum by (Type)`).
+              aggregationFunction: sum
+          ray_spill_manager_objects_bytes:      # Gauge: Spilled object bytes per node/state.
+            total_spill_bytes_by_state:       # Summing gives cluster-wide bytes (query with `sum by (State)`).
+              aggregationFunction: sum
+          ray_pull_manager_retries_total:       # Gauge: Pull retries per node.
+            total_cluster_pull_retries:       # Summing gives total pull retries across the cluster.
+              aggregationFunction: sum
+
+          # --- Ray Logical Resources ---
+          ray_resources:                        # Gauge: Logical resources per node/name/state.
+            total_cluster_resources_by_name_state: # Summing gives cluster-wide view (query with `sum by (Name, State)`).
+              aggregationFunction: sum
+
+          # --- GCS Health ---
+          ray_gcs_storage_operation_count_total: # Counter: GCS storage ops per operation type.
+            total_gcs_ops_by_type:            # Summing across potential GCS replicas (query with `sum by (Operation)`).
+              aggregationFunction: sum
+          # ray_health_check_rpc_latency_ms:    # Histogram: Keep non-aggregated or handle counts/sums separately if needed.
+
+          # --- Process Specific (Example for context) ---
+          # Generally keep these per-process/instance, no cluster-wide sum needed in this spec.
+          process_resident_memory_bytes:        
+          process_cpu_seconds_total:
+      # --- Ray Worker Node ---
+      rayworker: # Ray worker node component
+        # Default metrics endpoint on workers is often :8080, exposed by the agent. Adjust if necessary.
+        prometheusEndpoint: "http://localhost:8080/metrics" 
+        metrics: 
+          # --- Node Resources (Worker Specific) ---
+          # These are vital for identifying individual worker hotspots or resource exhaustion.
+          ray_node_cpu_utilization:             # Gauge: Keep per-worker. Crucial for spotting overloaded workers.
+          ray_node_cpu_count:                   # Gauge: CPU cores available per worker node.
+            total_worker_cpus:                # Summing gives total CPU capacity across all workers.
+              aggregationFunction: sum
+          ray_node_mem_used:                    # Gauge: Physical memory used per worker node.
+            total_worker_mem_used_bytes:      # Summing gives total physical memory usage across all workers.
+              aggregationFunction: sum
+          ray_node_mem_available:               # Gauge: Keep per-worker. Important for individual node health.
+          ray_node_mem_total:                   # Gauge: Total physical memory per worker node.
+            total_worker_mem_bytes:           # Summing gives total physical memory capacity across all workers.
+              aggregationFunction: sum
+          ray_node_mem_shared_bytes:            # Gauge: Shared memory usage per worker node (Plasma).
+            total_worker_mem_shared_bytes:    # Summing gives total shared memory usage across all workers.
+              aggregationFunction: sum
+          ray_node_disk_utilization_percentage: # Gauge: Keep per-worker. Essential for identifying full disks.
+          ray_node_disk_io_read_speed:          # Gauge: Disk read speed per worker node.
+            total_worker_disk_read_bytes_per_second: # Summing gives total disk read throughput across all workers.
+              aggregationFunction: sum
+          ray_node_disk_io_write_speed:         # Gauge: Disk write speed per worker node.
+            total_worker_disk_write_bytes_per_second: # Summing gives total disk write throughput across all workers.
+              aggregationFunction: sum
+          ray_node_disk_read_iops:              # Gauge: Disk read IOPS per worker node.
+            total_worker_disk_read_iops:      # Summing gives total disk read IOPS across all workers.
+              aggregationFunction: sum
+          ray_node_disk_write_iops:             # Gauge: Disk write IOPS per worker node.
+            total_worker_disk_write_iops:     # Summing gives total disk write IOPS across all workers.
+              aggregationFunction: sum
+          ray_node_network_send_speed:          # Gauge: Network send speed per worker node.
+            total_worker_network_send_bytes_per_second: # Summing gives total network send throughput across all workers.
+              aggregationFunction: sum
+          ray_node_network_receive_speed:       # Gauge: Network receive speed per worker node.
+            total_worker_network_receive_bytes_per_second: # Summing gives total network receive throughput across all workers.
+              aggregationFunction: sum
+
+          # --- Component Resources (Worker Specific) ---
+          # Usually best viewed per-worker, per-component to find specific issues.
+          ray_component_cpu_percentage:         
+          ray_component_rss_mb:                 
+          ray_component_uss_mb:                 
+          ray_component_num_fds:                # Gauge: File descriptors per worker/component.
+            total_worker_component_fds:       # Summing gives total FDs used by Ray components across all workers.
+              aggregationFunction: sum
+
+          # --- Scheduling & Workload (Worker's View) ---
+          # Aggregating these across workers shows cluster-wide task distribution and bottlenecks.
+          ray_scheduler_tasks:                  # Gauge: Tasks per worker/state.
+            total_worker_scheduler_tasks_by_state: # Summing gives cluster-wide task counts (query with `sum by (State)`).
+              aggregationFunction: sum
+          ray_scheduler_unscheduleable_tasks:   # Gauge: Unschedulable tasks per worker/reason.
+            total_worker_unschedulable_tasks_by_reason: # Summing gives cluster-wide counts (query with `sum by (Reason)`).
+              aggregationFunction: sum
+          ray_scheduler_failed_worker_startup_total: # Gauge: Worker startup failures per worker/reason
+            total_worker_startup_failures_by_reason: # Summing gives cluster-wide counts (query with `sum by (Reason)`).
+              aggregationFunction: sum
+
+          # --- Object Store & Spilling (Worker Specific) ---
+          ray_object_store_used_memory:         # Gauge: Object store memory used per worker node.
+            total_worker_object_store_used_bytes: # Summing gives total object store usage across all workers.
+              aggregationFunction: sum
+          ray_object_store_available_memory:    # Gauge: Keep per-worker. Important for individual node capacity.
+          ray_object_store_num_local_objects:   # Gauge: Number of primary object copies per worker node.
+            total_worker_local_objects:       # Summing gives total primary objects across all workers.
+              aggregationFunction: sum
+          ray_object_store_fallback_memory:     # Gauge: Memory spilled to disk per worker node.
+            total_worker_fallback_bytes:      # Summing gives total bytes spilled to disk across all workers.
+              aggregationFunction: sum
+          ray_spill_manager_request_total:      # Gauge: Spill/restore counts per worker/type.
+            total_worker_spill_requests_by_type: # Summing gives cluster-wide counts (query with `sum by (Type)`).
+              aggregationFunction: sum
+          ray_spill_manager_objects_bytes:      # Gauge: Spilled object bytes per worker/state.
+            total_worker_spill_bytes_by_state: # Summing gives cluster-wide bytes (query with `sum by (State)`).
+              aggregationFunction: sum
+          ray_pull_manager_retries_total:       # Gauge: Pull retries per worker node.
+            total_worker_pull_retries:        # Summing gives total pull retries across all workers.
+              aggregationFunction: sum
+          ray_pull_manager_requests:            # Gauge: Pull requests per worker/type {Queued, Active, Pinned}.
+            total_worker_pull_requests_by_type: # Summing gives cluster-wide counts (query with `sum by (Type)`).
+              aggregationFunction: sum
+          # Object directory metrics can be noisy but useful for deep dives
+          # ray_object_directory_lookups:         
+          # ray_object_directory_updates:         
+          # ray_object_directory_subscriptions:
+
+          # --- Ray Logical Resources (Worker's View) ---
+          ray_resources:                        # Gauge: Logical resources per worker/name/state.
+            total_worker_resources_by_name_state: # Summing gives cluster-wide view (query with `sum by (Name, State)`).
+              aggregationFunction: sum
+
+          # --- Worker Process Management ---
+          ray_internal_num_processes_started_total: # Counter: Worker processes started per node.
+            total_worker_processes_started:       # Summing gives total worker starts across cluster.
+              aggregationFunction: sum
+          ray_internal_num_processes_started_from_cache_total: # Counter: Workers started from cache per node.
+            total_worker_processes_started_from_cache: # Summing gives total cache hits across cluster.
+              aggregationFunction: sum
+          # Note: Skipped counts (job/runtime mismatch) are also available if needed.
+
+          # --- Process Specific (Example for context - Agent Process on Worker) ---
+          # Generally keep these per-process/instance, no cluster-wide sum needed in this spec.
+          process_resident_memory_bytes:        
+          process_cpu_seconds_total:
+      # --- Ray GPU Worker Node ---
+      raygpuworker: # Ray GPU worker node component
+        # Default metrics endpoint on workers is often :8080, exposed by the agent. Adjust if necessary.
+        prometheusEndpoint: "http://localhost:8080/" 
+        metrics: 
+          # --- Node Resources (GPU Worker Specific) ---
+          ray_node_cpu_utilization:             # Gauge: Keep per-worker. CPU usage is still relevant.
+          ray_node_cpu_count:                   # Gauge: CPU cores available per worker node.
+            total_gpu_worker_cpus:            # Summing gives total CPU capacity across all GPU workers.
+              aggregationFunction: sum
+          ray_node_mem_used:                    # Gauge: Physical memory used per worker node.
+            total_gpu_worker_mem_used_bytes:  # Summing gives total physical memory usage across all GPU workers.
+              aggregationFunction: sum
+          ray_node_mem_available:               # Gauge: Keep per-worker. Important for individual node health.
+          ray_node_mem_total:                   # Gauge: Total physical memory per worker node.
+            total_gpu_worker_mem_bytes:       # Summing gives total physical memory capacity across all GPU workers.
+              aggregationFunction: sum
+          ray_node_mem_shared_bytes:            # Gauge: Shared memory usage per worker node (Plasma).
+            total_gpu_worker_mem_shared_bytes: # Summing gives total shared memory usage across all GPU workers.
+              aggregationFunction: sum
+          ray_node_disk_utilization_percentage: # Gauge: Keep per-worker. Essential for identifying full disks.
+          ray_node_disk_io_read_speed:          # Gauge: Disk read speed per worker node.
+            total_gpu_worker_disk_read_bytes_per_second: # Summing gives total disk read throughput across all GPU workers.
+              aggregationFunction: sum
+          ray_node_disk_io_write_speed:         # Gauge: Disk write speed per worker node.
+            total_gpu_worker_disk_write_bytes_per_second: # Summing gives total disk write throughput across all GPU workers.
+              aggregationFunction: sum
+          ray_node_disk_read_iops:              # Gauge: Disk read IOPS per worker node.
+            total_gpu_worker_disk_read_iops:  # Summing gives total disk read IOPS across all GPU workers.
+              aggregationFunction: sum
+          ray_node_disk_write_iops:             # Gauge: Disk write IOPS per worker node.
+            total_gpu_worker_disk_write_iops: # Summing gives total disk write IOPS across all GPU workers.
+              aggregationFunction: sum
+          ray_node_network_send_speed:          # Gauge: Network send speed per worker node.
+            total_gpu_worker_network_send_bytes_per_second: # Summing gives total network send throughput across all GPU workers.
+              aggregationFunction: sum
+          ray_node_network_receive_speed:       # Gauge: Network receive speed per worker node.
+            total_gpu_worker_network_receive_bytes_per_second: # Summing gives total network receive throughput across all GPU workers.
+              aggregationFunction: sum
+              
+          # --- ++ GPU Hardware Metrics ++ ---
+          ray_node_gpus_available:              # Gauge: GPUs available per worker node/GPU index.
+            total_cluster_gpus_available:     # Summing gives total GPU count across all GPU workers (Query `sum by (GpuDeviceName)` for totals per type).
+              aggregationFunction: sum
+          ray_node_gpus_utilization:            # Gauge: Keep per-worker/per-GPU. Crucial for identifying individual overloaded GPUs.
+          ray_node_gram_used:                   # Gauge: GPU RAM used per worker node/GPU index (MB).
+            total_cluster_gram_used_mb:       # Summing gives total GPU RAM usage across all GPU workers.
+              aggregationFunction: sum
+          ray_node_gram_available:              # Gauge: Keep per-worker/per-GPU. Important for individual GPU memory capacity.
+          # --- ++ End GPU Hardware Metrics ++ ---
+
+          # --- Component Resources (GPU Worker Specific) ---
+          # Usually best viewed per-worker, per-component.
+          ray_component_cpu_percentage:         
+          ray_component_rss_mb:                 
+          ray_component_uss_mb:                 
+          ray_component_num_fds:                # Gauge: File descriptors per worker/component.
+            total_gpu_worker_component_fds:   # Summing gives total FDs used by Ray components across all GPU workers.
+              aggregationFunction: sum
+
+          # --- Scheduling & Workload (GPU Worker's View) ---
+          ray_scheduler_tasks:                  # Gauge: Tasks per worker/state.
+            total_gpu_worker_scheduler_tasks_by_state: # Summing gives cluster-wide task counts on GPU workers (query with `sum by (State)`).
+              aggregationFunction: sum
+          ray_scheduler_unscheduleable_tasks:   # Gauge: Unschedulable tasks per worker/reason (check for GPU waits).
+            total_gpu_worker_unschedulable_tasks_by_reason: # Summing gives cluster-wide counts on GPU workers (query with `sum by (Reason)`).
+              aggregationFunction: sum
+          ray_scheduler_failed_worker_startup_total: # Gauge: Worker startup failures per worker/reason
+            total_gpu_worker_startup_failures_by_reason: # Summing gives cluster-wide counts on GPU workers (query with `sum by (Reason)`).
+              aggregationFunction: sum
+
+          # --- Object Store & Spilling (GPU Worker Specific) ---
+          # GPU tasks can put high pressure here due to potentially large data.
+          ray_object_store_used_memory:         # Gauge: Object store memory used per worker node.
+            total_gpu_worker_object_store_used_bytes: # Summing gives total object store usage across all GPU workers.
+              aggregationFunction: sum
+          ray_object_store_available_memory:    # Gauge: Keep per-worker. Important for individual node capacity.
+          ray_object_store_num_local_objects:   # Gauge: Number of primary object copies per worker node.
+            total_gpu_worker_local_objects:   # Summing gives total primary objects across all GPU workers.
+              aggregationFunction: sum
+          ray_object_store_fallback_memory:     # Gauge: Memory spilled to disk per worker node.
+            total_gpu_worker_fallback_bytes:  # Summing gives total bytes spilled to disk across all GPU workers.
+              aggregationFunction: sum
+          ray_spill_manager_request_total:      # Gauge: Spill/restore counts per worker/type.
+            total_gpu_worker_spill_requests_by_type: # Summing gives cluster-wide counts on GPU workers (query with `sum by (Type)`).
+              aggregationFunction: sum
+          ray_spill_manager_objects_bytes:      # Gauge: Spilled object bytes per worker/state.
+            total_gpu_worker_spill_bytes_by_state: # Summing gives cluster-wide bytes on GPU workers (query with `sum by (State)`).
+              aggregationFunction: sum
+          ray_pull_manager_retries_total:       # Gauge: Pull retries per worker node.
+            total_gpu_worker_pull_retries:    # Summing gives total pull retries across all GPU workers.
+              aggregationFunction: sum
+          ray_pull_manager_requests:            # Gauge: Pull requests per worker/type {Queued, Active, Pinned}.
+            total_gpu_worker_pull_requests_by_type: # Summing gives cluster-wide counts on GPU workers (query with `sum by (Type)`).
+              aggregationFunction: sum
+
+          # --- Ray Logical Resources (GPU Worker's View) ---
+          ray_resources:                        # Gauge: Logical resources per worker/name/state (includes GPU, accelerator_type).
+            total_gpu_worker_resources_by_name_state: # Summing gives cluster-wide view on GPU workers (query with `sum by (Name, State)`).
+              aggregationFunction: sum
+
+          # --- Worker Process Management ---
+          ray_internal_num_processes_started_total: # Counter: Worker processes started per node.
+            total_gpu_worker_processes_started: # Summing gives total worker starts across GPU workers.
+              aggregationFunction: sum
+          ray_internal_num_processes_started_from_cache_total: # Counter: Workers started from cache per node.
+            total_gpu_worker_processes_started_from_cache: # Summing gives total cache hits across GPU workers.
+              aggregationFunction: sum
+
+          # --- Process Specific (Example for context - Agent Process on GPU Worker) ---
+          process_resident_memory_bytes:        
+          process_cpu_seconds_total:
+
 x-omnistrate-load-balancer:
   https:
     - name: Dashboard
@@ -16,10 +355,10 @@ x-omnistrate-load-balancer:
 x-omnistrate-service-plan:
   name: 'ray-cluster'
   tenancyType: 'OMNISTRATE_DEDICATED_TENANCY'
-  # deployment:
-  #   byoaDeployment:
-  #     AwsAccountId: '541226919566'
-  #     AwsBootstrapRoleAccountArn: 'arn:aws:iam::541226919566:role/omnistrate-bootstrap-role'
+  deployment:
+    byoaDeployment:
+      AwsAccountId: '541226919566'
+      AwsBootstrapRoleAccountArn: 'arn:aws:iam::541226919566:role/omnistrate-bootstrap-role'
 
 services:
   raycluster:
