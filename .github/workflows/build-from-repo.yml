@@ -30,6 +30,7 @@ jobs:
 
         - name: Get authenticated user
           run: |
+            gh auth login
             gh auth status
             gh api user --jq '.login'
 
