@@ -27,6 +27,12 @@ jobs:
 
         - name: Verify installation
           run: gh --version
+
+        - name: Get authenticated user
+          run: |
+            gh auth status
+            gh api user --jq '.login'
+
         - name: Setup Omnistrate CTL
           uses: omnistrate-oss/setup-omnistrate-ctl@v1
           with:
