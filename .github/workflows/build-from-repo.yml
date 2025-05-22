@@ -25,7 +25,8 @@ jobs:
         - name: Checkout repository
           uses: actions/checkout@v4
 
-
+        - name: Verify installation
+          run: gh --version
         - name: Setup Omnistrate CTL
           uses: omnistrate-oss/setup-omnistrate-ctl@v1
           with:
