@@ -19,7 +19,6 @@ jobs:
         permissions:
             contents: read
             packages: write
-            id-token: write
 
         steps:
        
@@ -34,4 +33,6 @@ jobs:
             password: ${{ secrets.OMNISTRATE_PASSWORD }}
 
         - name: Build and Deploy with Omnistrate CLI
+          env: 
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           run: omctl build-from-repo -f spec-cluster.yaml --service-name Ray
