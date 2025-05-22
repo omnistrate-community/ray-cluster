@@ -30,8 +30,8 @@ jobs:
         - name: Setup Omnistrate CTL
           uses: omnistrate-oss/setup-omnistrate-ctl@v1
           with:
-            email: ${{ secrets.username }}
-            password: ${{ secrets.password }}
+            email: ${{ secrets.OMNISTRATE_USERNAME }}
+            password: ${{ secrets.OMNISTRATE_PASSWORD }}
 
         - name: Build and Deploy with Omnistrate CLI
           run: omctl build-from-repo -f spec-cluster.yaml --service-name Ray
