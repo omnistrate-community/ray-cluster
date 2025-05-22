@@ -42,4 +42,5 @@ jobs:
           env: 
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             GH_TOKEN: ${{ github.token }}
-          run: omctl build-from-repo -f spec-cluster.yaml --service-name Ray --username ${{ secrets.OMNISTRATE_USERNAME }} --password ${{ secrets.OMNISTRATE_PASSWORD }} --image-name omnistrate/ray:latest --image-tag latest --build-args GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} --build-args GITHUB_USER=${{ github.actor }} --build-args GITHUB_REPO=${{ github.repository }} --build-args GITHUB_SHA=${{ github.sha }} --build-args GITHUB_REF=${{ github.ref_name }} --build-args GITHUB_RUN_ID=${{ github.run_id }} --build-args GITHUB_RUN_NUMBER=${{ github.run_number }}
+          run: | 
+            omctl build-from-repo -f spec-jobs-mt.yaml --service-name Ray
