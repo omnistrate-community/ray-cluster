@@ -24,14 +24,8 @@ jobs:
        
         - name: Checkout repository
           uses: actions/checkout@v4
-
-        - name: Verify installation
-          run: gh --version
-
         - name: Get authenticated user
           run: |
-            gh auth login
-            gh auth status
             gh api user --jq '.login'
 
         - name: Setup Omnistrate CTL
