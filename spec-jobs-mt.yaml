@@ -14,7 +14,7 @@ services:
       context: ./jobs/hello-world
       dockerfile: Dockerfile
     env_file:
-      - ".omnistrate.env"
+      - ".env"
     environment:
       RAY_ADDRESS: "ray://{{ $var.rayClusterAddress }}:10001"
       SCRIPT_PATH: "submit_job.py"
