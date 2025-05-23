@@ -29,6 +29,7 @@ jobs:
             echo "${{ secrets.GH_PAT }}" | gh auth login --with-token
 
         - name: Build and Deploy with Omnistrate CLI
+          working-directory: ${{ github.workspace }}
           env:
             GH_PAT: ${{ secrets.GH_PAT }}
           run: | 
