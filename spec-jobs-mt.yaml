@@ -13,9 +13,14 @@ services:
     build:
       context: ./jobs/hello-world
       dockerfile: Dockerfile
+    env_file:
+      - ".omnistrate.env"
     environment:
       RAY_ADDRESS: "ray://{{ $var.rayClusterAddress }}:10001"
       SCRIPT_PATH: "submit_job.py"
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
     deploy:
       resources:
         reservations:
