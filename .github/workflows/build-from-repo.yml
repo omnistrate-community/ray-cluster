@@ -1,0 +1,35 @@
+name: Build from repo
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+    cancel-in-progress: false
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+
+        steps:
+       
+        - name: Checkout repository
+          uses: actions/checkout@v4
+
+        - name: Setup Omnistrate CTL
+          uses: omnistrate-oss/setup-omnistrate-ctl@v1
+          with:
+            email: ${{ secrets.OMNISTRATE_USERNAME }}
+            password: ${{ secrets.OMNISTRATE_PASSWORD }}
+
+        - name: Authenticate GitHub CLI
+          run: |
+            echo "${{ secrets.GH_PAT }}" | gh auth login --with-token
+
+        - name: Build and Deploy with Omnistrate CLI
+          env:
+            GH_PAT: ${{ secrets.GH_PAT }}
+          run: | 
+            omctl build-from-repo -f spec-jobs-mt.yaml --service-name Ray

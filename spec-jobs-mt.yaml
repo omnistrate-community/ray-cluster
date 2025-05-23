@@ -54,6 +54,7 @@ services:
         required: false
         export: true
         defaultValue: "1"
+    x-omnistrate-mode-internal: false 
   hello-cuda:
     build:
       context: ./jobs/hello-cuda
@@ -99,6 +100,7 @@ services:
         required: false
         export: true
         defaultValue: "1"
+    x-omnistrate-mode-internal: false 
 x-omnistrate-image-registry-attributes:
   ghcr.io:
     auth:
