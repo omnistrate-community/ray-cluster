@@ -1,4 +1,4 @@
-name: Bulid from repo
+name: Build from repo
 
 on:
   push:
