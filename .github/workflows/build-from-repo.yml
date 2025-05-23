@@ -26,7 +26,11 @@ jobs:
           with:
             email: ${{ secrets.OMNISTRATE_USERNAME }}
             password: ${{ secrets.OMNISTRATE_PASSWORD }}
-           
+
+        - name: Authenticate GitHub CLI
+          run: |
+            echo "${{ secrets.GH_PAT }}" | gh auth login --with-token
+
         - name: Build and Deploy with Omnistrate CLI
           env:
             GH_PAT: ${{ secrets.GH_PAT }}
