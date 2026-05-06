@@ -37,7 +37,7 @@ jobs:
           env:
             GH_PAT: ${{ secrets.GITHUB_TOKEN }}
           run: | 
-            omctl build-from-repo -f spec-jobs-mt.yaml --service-name Ray --skip-publishing
+            omctl build-from-repo -f spec-jobs-mt.yaml --service-name Ray 
 
         - name: Build and Deploy with Omnistrate CLI
           if : github.event_name != 'pull_request'
