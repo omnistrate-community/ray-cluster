@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 concurrency:
     group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
@@ -28,7 +31,15 @@ jobs:
           run: |
             echo "${{ secrets.GH_PAT }}" | gh auth login --with-token
 
+        - name: Build and Deploy with Omnistrate CLI (dry run)
+          if : github.event_name == 'pull_request'
+          env:
+            GH_PAT: ${{ secrets.GH_PAT }}
+          run: | 
+            omctl build-from-repo -f spec-jobs-mt.yaml --service-name Ray
+
         - name: Build and Deploy with Omnistrate CLI
+          if : github.event_name != 'pull_request'
           env:
             GH_PAT: ${{ secrets.GH_PAT }}
           run: | 
