@@ -12,6 +12,11 @@ concurrency:
     group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
     cancel-in-progress: false
 
+permissions:
+  contents: read
+  packages: write  # Required for GitHub Packages
+  id-token: write  # Required for "Trusted Publishing" on npm
+
 jobs:
     build:
         runs-on: ubuntu-latest
@@ -27,20 +32,16 @@ jobs:
             email: ${{ secrets.OMNISTRATE_USERNAME }}
             password: ${{ secrets.OMNISTRATE_PASSWORD }}
 
-        - name: Authenticate GitHub CLI
-          run: |
-            echo "${{ secrets.GH_PAT }}" | gh auth login --with-token
-
         - name: Build and Deploy with Omnistrate CLI (dry run)
           if : github.event_name == 'pull_request'
           env:
-            GH_PAT: ${{ secrets.GH_PAT }}
+            GH_PAT: ${{ secrets.GITHUB_TOKEN }}
           run: | 
-            omctl build-from-repo -f spec-jobs-mt.yaml --service-name Ray
+            omctl build-from-repo -f spec-jobs-mt.yaml --service-name Ray --skip-publishing
 
         - name: Build and Deploy with Omnistrate CLI
           if : github.event_name != 'pull_request'
           env:
-            GH_PAT: ${{ secrets.GH_PAT }}
+            GH_PAT: ${{ secrets.GITHUB_TOKEN }}
           run: | 
             omctl build-from-repo -f spec-jobs-mt.yaml --service-name Ray
