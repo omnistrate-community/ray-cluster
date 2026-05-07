@@ -11,12 +11,12 @@ x-omnistrate-service-plan:
 services:
   hello-world:
     build:
+      context: ./jobs/hello-world
+      dockerfile: Dockerfile
       cache_from:
         - type=gha
       cache_to:
         - type=gha,mode=max
-      context: ./jobs/hello-world
-      dockerfile: Dockerfile
     environment:
       RAY_ADDRESS: "ray://{{ $var.rayClusterAddress }}:10001"
       SCRIPT_PATH: "submit_job.py"
