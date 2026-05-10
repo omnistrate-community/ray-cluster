@@ -63,6 +63,10 @@ services:
     build:
       context: ./jobs/hello-cuda
       dockerfile: Dockerfile
+      cache_from:
+        - type=gha
+      cache_to:
+        - type=gha,mode=max
     environment:
       RAY_ADDRESS: "ray://{{ $var.rayClusterAddress }}:10001"
       SCRIPT_PATH: "submit_job.py"

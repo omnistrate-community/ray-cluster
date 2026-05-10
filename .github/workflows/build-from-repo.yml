@@ -39,11 +39,11 @@ jobs:
           env:
             GH_PAT: ${{ secrets.GH_PAT }}
           run: | 
-            omctl build-from-repo -f spec-jobs-mt.yaml --service-name Ray
+            omctl build-from-repo -f spec-jobs-mt.yaml --product-name Ray
 
         - name: Build and Deploy with Omnistrate CLI
           if : github.event_name != 'pull_request'
           env:
             GH_PAT: ${{ secrets.GH_PAT }}
           run: | 
-            omctl build-from-repo -f spec-jobs-mt.yaml --service-name Ray
+            omctl build-from-repo -f spec-jobs-mt.yaml --product-name Ray
