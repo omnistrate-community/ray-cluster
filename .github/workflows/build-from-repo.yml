@@ -46,7 +46,7 @@ jobs:
           env:
             GH_PAT: ${{ secrets.GH_PAT }}
           run: | 
-            omctl build-from-repo -f spec-jobs-mt.yaml --product-name Ray
+            omctl build-from-repo -f spec-jobs-mt.yaml --product-name Ray --dry-run
 
         - name: Build and Deploy with Omnistrate CLI
           if : github.event_name != 'pull_request'
