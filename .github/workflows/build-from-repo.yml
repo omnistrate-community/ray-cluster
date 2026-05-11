@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:  
+      - main
 
 concurrency:
     group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
@@ -16,7 +19,17 @@ jobs:
         steps:
        
         - name: Checkout repository
-          uses: actions/checkout@v4
+          uses: actions/checkout@v6
+
+        - name: Expose GitHub Actions Runtime
+          uses: crazy-max/ghaction-github-runtime@v3
+
+        - name: Set up Docker Buildx
+          uses: docker/setup-buildx-action@v3
+          with:
+            driver-opts: |
+              env.ACTIONS_CACHE_URL=${{ env.ACTIONS_CACHE_URL }}
+              env.ACTIONS_RUNTIME_TOKEN=${{ env.ACTIONS_RUNTIME_TOKEN }}
 
         - name: Setup Omnistrate CTL
           uses: omnistrate-oss/setup-omnistrate-ctl@v1
@@ -28,8 +41,16 @@ jobs:
           run: |
             echo "${{ secrets.GH_PAT }}" | gh auth login --with-token
 
-        - name: Build and Deploy with Omnistrate CLI
+        - name: Build and Deploy with Omnistrate CLI (dry run)
+          if : github.event_name == 'pull_request'
           env:
             GH_PAT: ${{ secrets.GH_PAT }}
           run: | 
-            omctl build-from-repo -f spec-jobs-mt.yaml --service-name Ray
+            omctl build-from-repo -f spec-jobs-mt.yaml --product-name Ray --dry-run
+
+        - name: Build and Deploy with Omnistrate CLI
+          if : github.event_name != 'pull_request'
+          env:
+            GH_PAT: ${{ secrets.GH_PAT }}
+          run: | 
+            omctl build-from-repo -f spec-jobs-mt.yaml --product-name Ray
